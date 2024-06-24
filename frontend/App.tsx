@@ -5,15 +5,12 @@ import {
   PermissionStatus,
 } from "expo-image-picker";
 import { Alert, Image, Linking, StyleSheet, Text, View } from "react-native";
-// import UploadIcon from '../../assets/icons/upload';
-// import { Colors, Fonts, Gaps, Radius } from '../tokens';
 import FormData from "form-data";
 import axios, { AxiosError } from "axios";
-// import { FILE_API } from '../api';
-// import { UploadResponse } from './ImageUploader.interface';
 import Ionicons from "@expo/vector-icons/Ionicons";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { SafeAreaProvider, SafeAreaView } from "react-native-safe-area-context";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
 interface UploadResponse {
   url: string;
@@ -30,6 +27,17 @@ export default function App() {
 
   const [libraryPermissions, requestLibraryPermission] =
     useMediaLibraryPermissions();
+
+  useEffect(() => {
+    const loadImageFromStorage = async () => {
+      const storedImage = await AsyncStorage.getItem('uploadedImage');
+      if (storedImage) {
+        setImage(storedImage);
+      }
+    };
+
+    loadImageFromStorage();
+  }, []);
 
   const upload = async () => {
     const isPermissionGranted = await verifyMediaPermissions();
@@ -48,6 +56,7 @@ export default function App() {
       return;
     }
     setImage(uploadedUrl);
+    await saveImageToStorage(uploadedUrl);
   };
 
   const verifyMediaPermissions = async () => {
@@ -76,8 +85,6 @@ export default function App() {
     if (!result.assets) {
       return null;
     }
-
-    //Достаем из массива result.assets первый выбраный элемент (всегда массив, а если выбрать несколько фоток, то все они попадают сюда)
     return result.assets[0];
   };
 
@@ -109,9 +116,17 @@ export default function App() {
     }
   };
 
+  const saveImageToStorage = async (url: string) => {
+    try {
+      await AsyncStorage.setItem('uploadedImage', url);
+    } catch (error) {
+      console.error("Error saving image to AsyncStorage", error);
+    }
+  };
+
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={{flex: 1}}>
+      <SafeAreaView style={{ flex: 1 }}>
         <View style={styles.container}>
           <Text style={styles.text}>Загрузить изображение</Text>
           <Ionicons.Button name="cloud-upload" onPress={upload} />
